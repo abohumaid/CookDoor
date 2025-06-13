@@ -16,6 +16,7 @@
   <div class="container-fluid position-relative" style="padding-right:15px; padding-left:15px;">
     <div class="position-absolute top-0 end-0 m-3 d-flex gap-2" style="z-index:10;">
       <button id="addBtn" class="btn btn-success" style="display:none;"><i class="bi bi-plus-circle"></i> Add</button>
+      <button id="saveBtn" class="btn btn-primary" style="display:none;"><i class="bi bi-save"></i> Save</button>
       <button id="editBtn" class="btn btn-warning"><i class="bi bi-lock"></i> Login</button>
     </div>
     <div class="search-box d-flex align-items-center justify-content-between">
@@ -146,14 +147,17 @@
     const addOrEditCancel = document.getElementById('addOrEditCancel');
     let addOrEditCallback = null;
     let addOrEditContext = null;
+    const saveBtn = document.getElementById('saveBtn');
 
     // إظهار زر الإضافة بعد تسجيل الدخول
     function showAddBtn() {
       addBtn.style.display = 'block';
+      saveBtn.style.display = 'block';
     }
     // إخفاء زر الإضافة عند تسجيل الخروج (لو أضفت ذلك مستقبلاً)
     function hideAddBtn() {
       addBtn.style.display = 'none';
+      saveBtn.style.display = 'none';
     }
 
     // عند الضغط على زر Login/Logout
@@ -473,6 +477,12 @@
       }
       db.ref('branches').set(branches);
     }
+
+    saveBtn.addEventListener('click', function() {
+      saveTableToFirebase();
+      saveBtn.innerHTML = '<i class="bi bi-save"></i> Saved!';
+      setTimeout(() => { saveBtn.innerHTML = '<i class="bi bi-save"></i> Save'; }, 1200);
+    });
   </script>
 </body>
 </html> 
