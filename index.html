@@ -167,7 +167,7 @@
       addBtn.style.display = 'none';
     }
 
-    // عند تسجيل الدخول كأدمن
+    // عند الضغط على زر Login/Logout
     editBtn.addEventListener('click', function() {
       if (!isAdmin) {
         loginModal.style.display = 'flex';
@@ -175,6 +175,11 @@
         passwordInput.value = '';
         loginError.style.display = 'none';
         setTimeout(() => usernameInput.focus(), 100);
+      } else {
+        // تسجيل الخروج
+        isAdmin = false;
+        editBtn.innerHTML = '<i class="bi bi-lock"></i> Login';
+        hideAddBtn();
       }
     });
 
@@ -186,6 +191,7 @@
         isAdmin = true;
         loginModal.style.display = 'none';
         showAddBtn();
+        editBtn.innerHTML = '<i class="bi bi-box-arrow-right"></i> Logout';
       } else {
         loginError.textContent = 'Invalid username or password';
         loginError.style.display = 'block';
@@ -300,7 +306,6 @@
             const nameCell2 = newRow2.insertCell();
             nameCell2.className = 'fw-bold text-start';
             nameCell2.innerHTML = '<span class="text-primary">متاح:</span> <span class="editable-text text-success"></span>';
-            saveTableToLocalStorage();
           });
         } else if (selected === 'col') {
           // إضافة عمود جديد
@@ -312,7 +317,6 @@
             const cell = table.rows[i].insertCell(-1);
             cell.innerHTML = '';
           }
-          saveTableToLocalStorage();
         }
       });
     });
@@ -363,7 +367,6 @@
         if (lastEditedCell) lastEditedCell.classList.remove('table-warning');
         cell.classList.add('table-warning');
         lastEditedCell = cell;
-        saveTableToLocalStorage();
       };
       textarea.onkeydown = function(ev) {
         if (ev.key === 'Escape') {
@@ -422,57 +425,6 @@
           }
         };
       }
-    });
-
-    // --- Local Storage Logic ---
-    function getTableData() {
-      const rows = Array.from(document.querySelectorAll('#branchesTable tr'));
-      const data = [];
-      for (let i = 0; i < rows.length; i++) {
-        const cells = Array.from(rows[i].children);
-        const rowData = cells.map(cell => {
-          return {
-            html: cell.innerHTML,
-            rowspan: cell.rowSpan,
-            className: cell.className
-          };
-        });
-        data.push(rowData);
-      }
-      return data;
-    }
-
-    function setTableData(data) {
-      const tbody = document.getElementById('branchesTable');
-      tbody.innerHTML = '';
-      for (const rowData of data) {
-        const tr = document.createElement('tr');
-        for (const cellData of rowData) {
-          const td = document.createElement('td');
-          td.innerHTML = cellData.html;
-          td.className = cellData.className;
-          if (cellData.rowspan && cellData.rowspan > 1) td.rowSpan = cellData.rowspan;
-          tr.appendChild(td);
-        }
-        tbody.appendChild(tr);
-      }
-    }
-
-    function saveTableToLocalStorage() {
-      const data = getTableData();
-      localStorage.setItem('cookdoor_table', JSON.stringify(data));
-    }
-
-    function loadTableFromLocalStorage() {
-      const data = localStorage.getItem('cookdoor_table');
-      if (data) {
-        setTableData(JSON.parse(data));
-      }
-    }
-
-    // تحميل البيانات المحفوظة عند تحميل الصفحة
-    window.addEventListener('DOMContentLoaded', function() {
-      loadTableFromLocalStorage();
     });
   </script>
 </body>
