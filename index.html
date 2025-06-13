@@ -277,14 +277,30 @@
         if (selected === 'row') {
           // نافذة إدخال اسم الفرع فقط
           showBranchNameModal(function(branchName) {
-            // أضف الفرع الجديد إلى Firestore
-            db.collection('branches').doc(branchName).set({
-              branch: branchName,
-              address: '',
-              phone: '',
-              stopped: '',
-              available: ''
-            });
+            // الصف الأول
+            const newRow1 = table.insertRow();
+            const branchCell = newRow1.insertCell();
+            branchCell.rowSpan = 2;
+            branchCell.className = 'text-center align-middle';
+            branchCell.textContent = branchName;
+            const nameCell1 = newRow1.insertCell();
+            nameCell1.className = 'fw-bold text-start';
+            nameCell1.innerHTML = '<span class="text-primary">متوقف:</span> <span class="editable-text text-danger"></span>';
+            const addressCell1 = newRow1.insertCell();
+            addressCell1.rowSpan = 2;
+            addressCell1.className = 'text-start align-middle';
+            addressCell1.textContent = '';
+            const phoneCell1 = newRow1.insertCell();
+            phoneCell1.rowSpan = 2;
+            phoneCell1.className = 'text-start align-middle';
+            phoneCell1.textContent = '';
+            // الصف الثاني
+            const newRow2 = table.insertRow();
+            newRow2.style.borderBottom = '4px solid #000';
+            const nameCell2 = newRow2.insertCell();
+            nameCell2.className = 'fw-bold text-start';
+            nameCell2.innerHTML = '<span class="text-primary">متاح:</span> <span class="editable-text text-success"></span>';
+            saveTableToLocalStorage();
           });
         } else if (selected === 'col') {
           // إضافة عمود جديد
@@ -296,6 +312,7 @@
             const cell = table.rows[i].insertCell(-1);
             cell.innerHTML = '';
           }
+          saveTableToLocalStorage();
         }
       });
     });
@@ -346,6 +363,7 @@
         if (lastEditedCell) lastEditedCell.classList.remove('table-warning');
         cell.classList.add('table-warning');
         lastEditedCell = cell;
+        saveTableToLocalStorage();
       };
       textarea.onkeydown = function(ev) {
         if (ev.key === 'Escape') {
@@ -404,6 +422,57 @@
           }
         };
       }
+    });
+
+    // --- Local Storage Logic ---
+    function getTableData() {
+      const rows = Array.from(document.querySelectorAll('#branchesTable tr'));
+      const data = [];
+      for (let i = 0; i < rows.length; i++) {
+        const cells = Array.from(rows[i].children);
+        const rowData = cells.map(cell => {
+          return {
+            html: cell.innerHTML,
+            rowspan: cell.rowSpan,
+            className: cell.className
+          };
+        });
+        data.push(rowData);
+      }
+      return data;
+    }
+
+    function setTableData(data) {
+      const tbody = document.getElementById('branchesTable');
+      tbody.innerHTML = '';
+      for (const rowData of data) {
+        const tr = document.createElement('tr');
+        for (const cellData of rowData) {
+          const td = document.createElement('td');
+          td.innerHTML = cellData.html;
+          td.className = cellData.className;
+          if (cellData.rowspan && cellData.rowspan > 1) td.rowSpan = cellData.rowspan;
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+
+    function saveTableToLocalStorage() {
+      const data = getTableData();
+      localStorage.setItem('cookdoor_table', JSON.stringify(data));
+    }
+
+    function loadTableFromLocalStorage() {
+      const data = localStorage.getItem('cookdoor_table');
+      if (data) {
+        setTableData(JSON.parse(data));
+      }
+    }
+
+    // تحميل البيانات المحفوظة عند تحميل الصفحة
+    window.addEventListener('DOMContentLoaded', function() {
+      loadTableFromLocalStorage();
     });
   </script>
 </body>
