@@ -33,36 +33,7 @@
             <th>الرقم</th>
           </tr>
         </thead>
-        <tbody id="branchesTable">
-          <tr>
-            <td rowspan="2" class="text-center align-middle">المهندسين</td>
-            <td class="fw-bold text-start"><span class="text-primary">متوقف:</span> <span class="editable-text text-danger"></span></td>
-            <td rowspan="2" class="text-start align-middle">شارع جامعة الدول العربية</td>
-            <td rowspan="2" class="text-start align-middle">0123456789</td>
-          </tr>
-          <tr style="border-bottom:4px solid #000;">
-            <td class="fw-bold text-start"><span class="text-primary">متاح:</span> <span class="editable-text text-success"></span></td>
-          </tr>
-          <tr>
-            <td rowspan="2" class="text-center align-middle">مدينة نصر</td>
-            <td class="fw-bold text-start"><span class="text-primary">متوقف:</span> <span class="editable-text text-danger"></span></td>
-            <td rowspan="2" class="text-start align-middle">شارع عباس العقاد</td>
-            <td rowspan="2" class="text-start align-middle">0112233445</td>
-          </tr>
-          <tr style="border-bottom:4px solid #000;">
-            <td class="fw-bold text-start"><span class="text-primary">متاح:</span> <span class="editable-text text-success"></span></td>
-          </tr>
-          <tr>
-            <td rowspan="2" class="text-center align-middle">الدقي</td>
-            <td class="fw-bold text-start"><span class="text-primary">متوقف:</span> <span class="editable-text text-danger"></span></td>
-            <td rowspan="2" class="text-start align-middle">شارع التحرير</td>
-            <td rowspan="2" class="text-start align-middle">0109988776</td>
-          </tr>
-          <tr style="border-bottom:4px solid #000;">
-            <td class="fw-bold text-start"><span class="text-primary">متاح:</span> <span class="editable-text text-success"></span></td>
-          </tr>
-          <!-- يمكنك إضافة المزيد من الفروع بهذا النمط -->
-        </tbody>
+        <tbody id="branchesTable"></tbody>
       </table>
     </div>
     <!-- نافذة تسجيل الدخول -->
@@ -104,7 +75,25 @@
       </div>
     </div>
   </div>
+  <!-- Firebase App (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <!-- Firebase Database (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
+    // إعداد الاتصال بـ Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBVC4Rp3ukludEKT9Xjk92-o-KxTDJl-T4",
+      authDomain: "cook-5375b.firebaseapp.com",
+      databaseURL: "https://cook-5375b-default-rtdb.firebaseio.com",
+      projectId: "cook-5375b",
+      storageBucket: "cook-5375b.appspot.com",
+      messagingSenderId: "210777784695",
+      appId: "1:210777784695:web:daa85e8e9eff65c0a76172",
+      measurementId: "G-DR1SYWR17K"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     const searchInput = document.getElementById('searchInput');
     const table = document.getElementById('branchesTable');
     searchInput.addEventListener('input', function() {
@@ -367,6 +356,7 @@
         if (lastEditedCell) lastEditedCell.classList.remove('table-warning');
         cell.classList.add('table-warning');
         lastEditedCell = cell;
+        saveTableToFirebase();
       };
       textarea.onkeydown = function(ev) {
         if (ev.key === 'Escape') {
@@ -418,6 +408,7 @@
           th.innerHTML = lines.map(line => line.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>');
           th.classList.add('table-warning');
           setTimeout(() => th.classList.remove('table-warning'), 2000);
+          saveTableToFirebase();
         };
         textarea.onkeydown = function(ev) {
           if (ev.key === 'Escape') {
@@ -426,6 +417,60 @@
         };
       }
     });
+
+    // تحميل بيانات الجدول من Firebase وعرضها
+    function renderTable(data) {
+      const table = document.getElementById('branchesTable');
+      table.innerHTML = '';
+      if (!data) return;
+      Object.keys(data).forEach(key => {
+        const branch = data[key];
+        // الصف الأول (متوقف)
+        const row1 = document.createElement('tr');
+        row1.innerHTML = `
+          <td rowspan="2" class="text-center align-middle">${branch.branch}</td>
+          <td class="fw-bold text-start"><span class="text-primary">متوقف:</span> <span class="editable-text text-danger">${branch.stopped || ''}</span></td>
+          <td rowspan="2" class="text-start align-middle">${branch.address || ''}</td>
+          <td rowspan="2" class="text-start align-middle">${branch.phone || ''}</td>
+        `;
+        table.appendChild(row1);
+        // الصف الثاني (متاح)
+        const row2 = document.createElement('tr');
+        row2.style.borderBottom = '4px solid #000';
+        row2.innerHTML = `
+          <td class="fw-bold text-start"><span class="text-primary">متاح:</span> <span class="editable-text text-success">${branch.available || ''}</span></td>
+        `;
+        table.appendChild(row2);
+      });
+    }
+
+    // الاستماع للتغييرات
+    db.ref('branches').on('value', (snapshot) => {
+      renderTable(snapshot.val());
+    });
+
+    // دالة لحفظ كل الجدول في Firebase (تستخدم عند أي تعديل)
+    function saveTableToFirebase() {
+      const table = document.getElementById('branchesTable');
+      const rows = table.querySelectorAll('tr');
+      const branches = {};
+      for (let i = 0; i < rows.length; i += 2) {
+        const branchCell = rows[i].querySelector('td');
+        const stoppedCell = rows[i].querySelectorAll('td')[1];
+        const addressCell = rows[i].querySelectorAll('td')[2];
+        const phoneCell = rows[i].querySelectorAll('td')[3];
+        const availableCell = rows[i+1].querySelector('td');
+        const branchName = branchCell ? branchCell.textContent : '';
+        branches['branch_' + i] = {
+          branch: branchName,
+          stopped: stoppedCell ? stoppedCell.querySelector('.editable-text')?.textContent : '',
+          available: availableCell ? availableCell.querySelector('.editable-text')?.textContent : '',
+          address: addressCell ? addressCell.textContent : '',
+          phone: phoneCell ? phoneCell.textContent : ''
+        };
+      }
+      db.ref('branches').set(branches);
+    }
   </script>
 </body>
 </html> 
