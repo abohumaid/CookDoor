@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title> CookDoor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.min.css">
+  <style>
+    body { background: #f8f9fa; }
+    .search-box { max-width: 400px; margin: 30px auto 20px; }
+    table { background: #fff; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid position-relative" style="padding-right:15px; padding-left:15px;">
+    <div class="position-absolute top-0 end-0 m-3 d-flex gap-2" style="z-index:10;">
+      <button id="addBtn" class="btn btn-success" style="display:none;"><i class="bi bi-plus-circle"></i> Add</button>
+      <button id="editBtn" class="btn btn-warning"><i class="bi bi-lock"></i> Login</button>
+    </div>
+    <div class="search-box d-flex align-items-center justify-content-between">
+      <img src="image .png" alt="logo" style="height:48px;width:auto;">
+      <input type="text" id="searchInput" class="form-control mx-2" placeholder="... Search by branch name">
+      <img src="image .png" alt="logo" style="height:48px;width:auto;">
+    </div>
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped text-center w-100" style="margin:0;">
+        <thead class="table-dark">
+          <tr>
+            <th>الفرع</th>
+            <th>الاسم</th>
+            <th>العنوان</th>
+            <th>الرقم</th>
+          </tr>
+        </thead>
+        <tbody id="branchesTable">
+          <tr>
+            <td rowspan="2" class="text-center align-middle">المهندسين</td>
+            <td class="fw-bold text-start"><span class="text-primary">متوقف:</span> <span class="editable-text text-danger"></span></td>
+            <td rowspan="2" class="text-start align-middle">شارع جامعة الدول العربية</td>
+            <td rowspan="2" class="text-start align-middle">0123456789</td>
+          </tr>
+          <tr style="border-bottom:4px solid #000;">
+            <td class="fw-bold text-start"><span class="text-primary">متاح:</span> <span class="editable-text text-success"></span></td>
+          </tr>
+          <tr>
+            <td rowspan="2" class="text-center align-middle">مدينة نصر</td>
+            <td class="fw-bold text-start"><span class="text-primary">متوقف:</span> <span class="editable-text text-danger"></span></td>
+            <td rowspan="2" class="text-start align-middle">شارع عباس العقاد</td>
+            <td rowspan="2" class="text-start align-middle">0112233445</td>
+          </tr>
+          <tr style="border-bottom:4px solid #000;">
+            <td class="fw-bold text-start"><span class="text-primary">متاح:</span> <span class="editable-text text-success"></span></td>
+          </tr>
+          <tr>
+            <td rowspan="2" class="text-center align-middle">الدقي</td>
+            <td class="fw-bold text-start"><span class="text-primary">متوقف:</span> <span class="editable-text text-danger"></span></td>
+            <td rowspan="2" class="text-start align-middle">شارع التحرير</td>
+            <td rowspan="2" class="text-start align-middle">0109988776</td>
+          </tr>
+          <tr style="border-bottom:4px solid #000;">
+            <td class="fw-bold text-start"><span class="text-primary">متاح:</span> <span class="editable-text text-success"></span></td>
+          </tr>
+          <!-- يمكنك إضافة المزيد من الفروع بهذا النمط -->
+        </tbody>
+      </table>
+    </div>
+    <!-- نافذة تسجيل الدخول -->
+    <div id="loginModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:30px 20px;border-radius:10px;min-width:300px;max-width:90vw;box-shadow:0 0 20px #0002;display:flex;flex-direction:column;align-items:center;">
+        <h5 class="mb-3">Admin Login</h5>
+        <input id="usernameInput" class="form-control mb-2" placeholder="Username" autocomplete="off">
+        <input id="passwordInput" class="form-control mb-2" placeholder="Password" type="password" autocomplete="off">
+        <div class="d-flex w-100 justify-content-between">
+          <button id="loginSubmit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Login</button>
+          <button id="loginCancel" class="btn btn-secondary ms-2"><i class="bi bi-x-circle"></i> Cancel</button>
+        </div>
+        <div id="loginError" class="text-danger mt-2" style="display:none;font-size:0.95em;"></div>
+      </div>
+    </div>
+    <!-- نافذة اختيار الإضافة أو التعديل -->
+    <div id="addOrEditModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:25px 20px;border-radius:10px;min-width:300px;max-width:90vw;box-shadow:0 0 20px #0002;display:flex;flex-direction:column;align-items:center;">
+        <h5 class="mb-3" id="addOrEditTitle">إضافة</h5>
+        <div id="addOrEditOptions" class="mb-3 w-100">
+          <!-- سيتم ملء الخيارات ديناميكياً -->
+        </div>
+        <div class="d-flex w-100 justify-content-between">
+          <button id="addOrEditSubmit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Confirm</button>
+          <button id="addOrEditCancel" class="btn btn-secondary ms-2"><i class="bi bi-x-circle"></i> Cancel</button>
+        </div>
+      </div>
+    </div>
+    <!-- نافذة إدخال اسم الفرع الجديد -->
+    <div id="branchNameModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:25px 20px;border-radius:10px;min-width:320px;max-width:90vw;box-shadow:0 0 20px #0002;display:flex;flex-direction:column;align-items:center;">
+        <h5 class="mb-3 text-primary">إضافة فرع جديد</h5>
+        <input id="branchNameInput" class="form-control mb-2 text-center fw-bold" placeholder="اسم الفرع الجديد" autocomplete="off" style="font-size:1.1em;">
+        <div class="d-flex w-100 justify-content-between">
+          <button id="branchNameSubmit" class="btn btn-success"><i class="bi bi-check-circle"></i> Confirm</button>
+          <button id="branchNameCancel" class="btn btn-secondary ms-2"><i class="bi bi-x-circle"></i> Cancel</button>
+        </div>
+        <div id="branchNameError" class="text-danger mt-2" style="display:none;font-size:0.95em;"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const searchInput = document.getElementById('searchInput');
+    const table = document.getElementById('branchesTable');
+    searchInput.addEventListener('input', function() {
+      if (this.value.trim() === '') {
+        const rows = table.getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+          rows[i].style.display = '';
+        }
+      } else {
+        // تصفية حسب اسم الفرع
+        const filter = this.value.trim();
+        const rows = Array.from(table.getElementsByTagName('tr'));
+        for (let i = 0; i < rows.length; i++) {
+          let branchCell = null;
+          for (let j = 0; j < rows[i].cells.length; j++) {
+            if (rows[i].cells[j].rowSpan === 2) {
+              branchCell = rows[i].cells[j];
+              break;
+            }
+          }
+          if (branchCell && branchCell.textContent.includes(filter)) {
+            rows[i].style.display = '';
+            if (rows[i+1]) rows[i+1].style.display = '';
+            i++;
+          } else if (branchCell) {
+            rows[i].style.display = 'none';
+            if (rows[i+1]) rows[i+1].style.display = 'none';
+            i++;
+          } else {
+            rows[i].style.display = 'none';
+          }
+        }
+      }
+    });
+
+    // منطق التعديل وتسجيل الدخول
+    let isAdmin = false;
+    const editBtn = document.getElementById('editBtn');
+    const loginModal = document.getElementById('loginModal');
+    const usernameInput = document.getElementById('usernameInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginSubmit = document.getElementById('loginSubmit');
+    const loginCancel = document.getElementById('loginCancel');
+    const loginError = document.getElementById('loginError');
+    const addBtn = document.getElementById('addBtn');
+    const addOrEditModal = document.getElementById('addOrEditModal');
+    const addOrEditTitle = document.getElementById('addOrEditTitle');
+    const addOrEditOptions = document.getElementById('addOrEditOptions');
+    const addOrEditSubmit = document.getElementById('addOrEditSubmit');
+    const addOrEditCancel = document.getElementById('addOrEditCancel');
+    let addOrEditCallback = null;
+    let addOrEditContext = null;
+
+    // إظهار زر الإضافة بعد تسجيل الدخول
+    function showAddBtn() {
+      addBtn.style.display = 'block';
+    }
+    // إخفاء زر الإضافة عند تسجيل الخروج (لو أضفت ذلك مستقبلاً)
+    function hideAddBtn() {
+      addBtn.style.display = 'none';
+    }
+
+    // عند تسجيل الدخول كأدمن
+    editBtn.addEventListener('click', function() {
+      if (!isAdmin) {
+        loginModal.style.display = 'flex';
+        usernameInput.value = '';
+        passwordInput.value = '';
+        loginError.style.display = 'none';
+        setTimeout(() => usernameInput.focus(), 100);
+      }
+    });
+
+    // بعد تسجيل الدخول بنجاح
+    loginSubmit.onclick = function() {
+      const user = usernameInput.value.trim();
+      const pass = passwordInput.value;
+      if (user === 'admin' && pass === '0000') {
+        isAdmin = true;
+        loginModal.style.display = 'none';
+        showAddBtn();
+      } else {
+        loginError.textContent = 'Invalid username or password';
+        loginError.style.display = 'block';
+      }
+    };
+
+    // منطق نافذة الإضافة أو التعديل
+    function showAddOrEditModal(title, options, callback, context) {
+      addOrEditTitle.textContent = title;
+      addOrEditOptions.innerHTML = '';
+      options.forEach((opt, i) => {
+        const div = document.createElement('div');
+        div.className = 'form-check';
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.className = 'form-check-input';
+        radio.name = 'addOrEditOption';
+        radio.id = 'addOrEditOption' + i;
+        radio.value = opt.value;
+        if (i === 0) radio.checked = true;
+        const label = document.createElement('label');
+        label.className = 'form-check-label';
+        label.htmlFor = radio.id;
+        label.innerHTML = opt.label;
+        div.appendChild(radio);
+        div.appendChild(label);
+        addOrEditOptions.appendChild(div);
+      });
+      addOrEditModal.style.display = 'flex';
+      addOrEditCallback = callback;
+      addOrEditContext = context;
+    }
+    addOrEditCancel.onclick = function() {
+      addOrEditModal.style.display = 'none';
+    };
+    addOrEditSubmit.onclick = function() {
+      const selected = addOrEditOptions.querySelector('input[name="addOrEditOption"]:checked');
+      if (addOrEditCallback) {
+        addOrEditCallback(selected.value, addOrEditContext);
+      }
+      addOrEditModal.style.display = 'none';
+    };
+    addOrEditModal.addEventListener('click', function(e) {
+      if (e.target === addOrEditModal) addOrEditModal.style.display = 'none';
+    });
+
+    // نافذة إدخال اسم الفرع الجديد
+    const branchNameModal = document.getElementById('branchNameModal');
+    const branchNameInput = document.getElementById('branchNameInput');
+    const branchNameSubmit = document.getElementById('branchNameSubmit');
+    const branchNameCancel = document.getElementById('branchNameCancel');
+    const branchNameError = document.getElementById('branchNameError');
+    let branchNameCallback = null;
+    function showBranchNameModal(callback, placeholderText) {
+      branchNameInput.value = '';
+      branchNameInput.placeholder = placeholderText || 'اسم الفرع الجديد';
+      branchNameError.style.display = 'none';
+      branchNameModal.style.display = 'flex';
+      setTimeout(() => branchNameInput.focus(), 100);
+      branchNameCallback = callback;
+    }
+    branchNameCancel.onclick = function() {
+      branchNameModal.style.display = 'none';
+    };
+    branchNameSubmit.onclick = function() {
+      const name = branchNameInput.value.trim();
+      if (!name) {
+        branchNameError.textContent = 'يرجى إدخال اسم الفرع';
+        branchNameError.style.display = 'block';
+        branchNameInput.focus();
+        return;
+      }
+      branchNameModal.style.display = 'none';
+      if (branchNameCallback) branchNameCallback(name);
+    };
+    branchNameInput.onkeydown = function(e) {
+      if (e.key === 'Enter') branchNameSubmit.onclick();
+    };
+    branchNameModal.addEventListener('click', function(e) {
+      if (e.target === branchNameModal) branchNameModal.style.display = 'none';
+    });
+
+    // منطق زر الإضافة
+    addBtn.addEventListener('click', function() {
+      showAddOrEditModal('Add', [
+        {label: '<i class="bi bi-plus-circle"></i> Add Row', value: 'row'},
+        {label: '<i class="bi bi-layout-three-columns"></i> Add Column', value: 'col'}
+      ], function(selected) {
+        if (selected === 'row') {
+          // نافذة إدخال اسم الفرع فقط
+          showBranchNameModal(function(branchName) {
+            // الصف الأول
+            const newRow1 = table.insertRow();
+            const branchCell = newRow1.insertCell();
+            branchCell.rowSpan = 2;
+            branchCell.className = 'text-center align-middle';
+            branchCell.textContent = branchName;
+            const nameCell1 = newRow1.insertCell();
+            nameCell1.className = 'fw-bold text-start';
+            nameCell1.innerHTML = '<span class="text-primary">متوقف:</span> <span class="editable-text text-danger"></span>';
+            const addressCell1 = newRow1.insertCell();
+            addressCell1.rowSpan = 2;
+            addressCell1.className = 'text-start align-middle';
+            addressCell1.textContent = '';
+            const phoneCell1 = newRow1.insertCell();
+            phoneCell1.rowSpan = 2;
+            phoneCell1.className = 'text-start align-middle';
+            phoneCell1.textContent = '';
+            // الصف الثاني
+            const newRow2 = table.insertRow();
+            newRow2.style.borderBottom = '4px solid #000';
+            const nameCell2 = newRow2.insertCell();
+            nameCell2.className = 'fw-bold text-start';
+            nameCell2.innerHTML = '<span class="text-primary">متاح:</span> <span class="editable-text text-success"></span>';
+          });
+        } else if (selected === 'col') {
+          // إضافة عمود جديد
+          const headRow = table.parentElement.querySelector('thead tr');
+          const th = document.createElement('th');
+          th.innerHTML = 'عمود جديد';
+          headRow.appendChild(th);
+          for (let i = 0; i < table.rows.length; i++) {
+            const cell = table.rows[i].insertCell(-1);
+            cell.innerHTML = '';
+          }
+        }
+      });
+    });
+
+    // عند الضغط مرتين على أي خلية
+    table.addEventListener('dblclick', function(e) {
+      if (!isAdmin) return;
+      const cell = e.target;
+      if (cell.tagName === 'TD') {
+        triggerCellEdit(cell);
+      }
+    });
+
+    // منطق التعديل العادي للخلايا
+    function triggerCellEdit(cell) {
+      if (cell.querySelector('textarea')) return;
+      // تحقق إذا كانت الخلية من عمود الاسم (متوقف أو متاح)
+      const isStopped = cell.innerHTML.includes('متوقف:');
+      const isAvailable = cell.innerHTML.includes('متاح:');
+      let prefix = '';
+      if (isStopped) prefix = '<span class="text-primary">متوقف:</span> ';
+      if (isAvailable) prefix = '<span class="text-primary">متاح:</span> ';
+      let editable = '';
+      if (prefix) {
+        const span = cell.querySelector('.editable-text');
+        editable = span ? span.textContent : '';
+      } else {
+        editable = cell.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+      }
+      const textarea = document.createElement('textarea');
+      textarea.value = editable;
+      textarea.className = 'form-control';
+      textarea.style.minWidth = '80px';
+      textarea.style.minHeight = '40px';
+      textarea.style.resize = 'vertical';
+      cell.innerHTML = '';
+      cell.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      textarea.onblur = function() {
+        const lines = textarea.value.split('\n');
+        if (prefix) {
+          cell.innerHTML = `${prefix}<span class=\"editable-text ${isStopped ? 'text-danger' : 'text-success'}\">${lines.map(line => line.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>')}</span>`;
+          cell.className = 'fw-bold text-start';
+        } else {
+          cell.innerHTML = lines.map(line => line.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>');
+        }
+        if (lastEditedCell) lastEditedCell.classList.remove('table-warning');
+        cell.classList.add('table-warning');
+        lastEditedCell = cell;
+      };
+      textarea.onkeydown = function(ev) {
+        if (ev.key === 'Escape') {
+          if (prefix) {
+            cell.innerHTML = `${prefix}<span class=\"editable-text ${isStopped ? 'text-danger' : 'text-success'}\">${editable}</span>`;
+            cell.className = 'fw-bold text-start';
+          } else {
+            cell.innerHTML = editable.split('\n').map(line => line.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>');
+          }
+        }
+      };
+    }
+
+    // إغلاق النافذة عند الضغط خارجها
+    loginModal.addEventListener('click', function(e) {
+      if (e.target === loginModal) loginModal.style.display = 'none';
+    });
+
+    // عند مسح خانة البحث، إظهار الجدول بالكامل
+    searchInput.addEventListener('input', function() {
+      if (this.value.trim() === '') {
+        const rows = table.getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+          rows[i].style.display = '';
+        }
+      }
+    });
+
+    // تفعيل التعديل على رؤوس الأعمدة بعد تسجيل الدخول
+    const tableHead = document.querySelector('thead');
+    tableHead.addEventListener('dblclick', function(e) {
+      if (!isAdmin) return;
+      const th = e.target;
+      if (th.tagName === 'TH') {
+        if (th.querySelector('textarea')) return;
+        const oldValue = th.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+        const textarea = document.createElement('textarea');
+        textarea.value = oldValue;
+        textarea.className = 'form-control';
+        textarea.style.minWidth = '60px';
+        textarea.style.minHeight = '30px';
+        textarea.style.resize = 'vertical';
+        th.textContent = '';
+        th.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        textarea.onblur = function() {
+          const lines = textarea.value.split('\n');
+          th.innerHTML = lines.map(line => line.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>');
+          th.classList.add('table-warning');
+          setTimeout(() => th.classList.remove('table-warning'), 2000);
+        };
+        textarea.onkeydown = function(ev) {
+          if (ev.key === 'Escape') {
+            th.innerHTML = oldValue.split('\n').map(line => line.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>');
+          }
+        };
+      }
+    });
+  </script>
+</body>
+</html> 
