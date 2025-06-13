@@ -153,11 +153,13 @@
     function showAddBtn() {
       addBtn.style.display = 'block';
       saveBtn.style.display = 'block';
+      refreshTableFromFirebase();
     }
     // إخفاء زر الإضافة عند تسجيل الخروج (لو أضفت ذلك مستقبلاً)
     function hideAddBtn() {
       addBtn.style.display = 'none';
       saveBtn.style.display = 'none';
+      refreshTableFromFirebase();
     }
 
     // عند الضغط على زر Login/Logout
@@ -424,7 +426,7 @@
       }
     });
 
-    // تحميل بيانات الجدول من Firebase وعرضها
+    // دالة لإعادة بناء الجدول مع زر الحذف للأدمن
     function renderTable(data) {
       const table = document.getElementById('branchesTable');
       table.innerHTML = '';
@@ -433,8 +435,12 @@
         const branch = data[key];
         // الصف الأول (متوقف)
         const row1 = document.createElement('tr');
+        let deleteBtn = '';
+        if (isAdmin) {
+          deleteBtn = `<button class="btn btn-sm btn-danger ms-2 delete-branch-btn" data-key="${key}"><i class="bi bi-trash"></i></button>`;
+        }
         row1.innerHTML = `
-          <td rowspan="2" class="text-center align-middle">${branch.branch}</td>
+          <td rowspan="2" class="text-center align-middle">${deleteBtn} ${branch.branch}</td>
           <td class="fw-bold text-start"><span class="text-primary">متوقف:</span> <span class="editable-text text-danger">${branch.stopped || ''}</span></td>
           <td rowspan="2" class="text-start align-middle">${branch.address || ''}</td>
           <td rowspan="2" class="text-start align-middle">${branch.phone || ''}</td>
@@ -448,8 +454,27 @@
         `;
         table.appendChild(row2);
       });
+      // إضافة حدث الحذف للأزرار (للأدمن فقط)
+      if (isAdmin) {
+        const deleteBtns = document.querySelectorAll('.delete-branch-btn');
+        deleteBtns.forEach(btn => {
+          btn.onclick = function(e) {
+            e.stopPropagation();
+            const key = btn.getAttribute('data-key');
+            if (confirm('Are you sure you want to delete this branch?')) {
+              db.ref('branches/' + key).remove();
+            }
+          };
+        });
+      }
     }
 
+    // عند تسجيل الدخول أو الخروج، أعد بناء الجدول ليظهر أو يخفي أزرار الحذف
+    function refreshTableFromFirebase() {
+      db.ref('branches').once('value').then(snapshot => {
+        renderTable(snapshot.val());
+      });
+    }
     // الاستماع للتغييرات (مرة واحدة فقط)
     db.ref('branches').on('value', (snapshot) => {
       renderTable(snapshot.val());
