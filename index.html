@@ -295,6 +295,7 @@
             const nameCell2 = newRow2.insertCell();
             nameCell2.className = 'fw-bold text-start';
             nameCell2.innerHTML = '<span class="text-primary">متاح:</span> <span class="editable-text text-success"></span>';
+            saveTableToFirebase();
           });
         } else if (selected === 'col') {
           // إضافة عمود جديد
@@ -306,6 +307,7 @@
             const cell = table.rows[i].insertCell(-1);
             cell.innerHTML = '';
           }
+          saveTableToFirebase();
         }
       });
     });
@@ -444,7 +446,7 @@
       });
     }
 
-    // الاستماع للتغييرات
+    // الاستماع للتغييرات (مرة واحدة فقط)
     db.ref('branches').on('value', (snapshot) => {
       renderTable(snapshot.val());
     });
