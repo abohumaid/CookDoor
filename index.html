@@ -6,10 +6,6 @@
   <title> CookDoor</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.min.css">
-  <!-- Firebase App (the core Firebase SDK) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <!-- Firestore -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <style>
     body { background: #f8f9fa; }
     .search-box { max-width: 400px; margin: 30px auto 20px; }
@@ -281,29 +277,14 @@
         if (selected === 'row') {
           // نافذة إدخال اسم الفرع فقط
           showBranchNameModal(function(branchName) {
-            // الصف الأول
-            const newRow1 = table.insertRow();
-            const branchCell = newRow1.insertCell();
-            branchCell.rowSpan = 2;
-            branchCell.className = 'text-center align-middle';
-            branchCell.textContent = branchName;
-            const nameCell1 = newRow1.insertCell();
-            nameCell1.className = 'fw-bold text-start';
-            nameCell1.innerHTML = '<span class="text-primary">متوقف:</span> <span class="editable-text text-danger"></span>';
-            const addressCell1 = newRow1.insertCell();
-            addressCell1.rowSpan = 2;
-            addressCell1.className = 'text-start align-middle';
-            addressCell1.textContent = '';
-            const phoneCell1 = newRow1.insertCell();
-            phoneCell1.rowSpan = 2;
-            phoneCell1.className = 'text-start align-middle';
-            phoneCell1.textContent = '';
-            // الصف الثاني
-            const newRow2 = table.insertRow();
-            newRow2.style.borderBottom = '4px solid #000';
-            const nameCell2 = newRow2.insertCell();
-            nameCell2.className = 'fw-bold text-start';
-            nameCell2.innerHTML = '<span class="text-primary">متاح:</span> <span class="editable-text text-success"></span>';
+            // أضف الفرع الجديد إلى Firestore
+            db.collection('branches').doc(branchName).set({
+              branch: branchName,
+              address: '',
+              phone: '',
+              stopped: '',
+              available: ''
+            });
           });
         } else if (selected === 'col') {
           // إضافة عمود جديد
@@ -365,65 +346,6 @@
         if (lastEditedCell) lastEditedCell.classList.remove('table-warning');
         cell.classList.add('table-warning');
         lastEditedCell = cell;
-
-        // تحديث Firestore عند التعديل
-        // حدد اسم الفرع من أقرب خلية rowspan=2 في نفس الصف أو الصف السابق
-        let row = cell.parentElement;
-        let branchCell = null;
-        for (let i = 0; i < row.cells.length; i++) {
-          if (row.cells[i].rowSpan === 2) {
-            branchCell = row.cells[i];
-            break;
-          }
-        }
-        if (!branchCell && row.previousElementSibling) {
-          let prevRow = row.previousElementSibling;
-          for (let i = 0; i < prevRow.cells.length; i++) {
-            if (prevRow.cells[i].rowSpan === 2) {
-              branchCell = prevRow.cells[i];
-              break;
-            }
-          }
-        }
-        if (!branchCell) return;
-        const branchName = branchCell.textContent;
-        // اجمع بيانات الفرع من الجدول
-        // ابحث عن عنوان ورقم الفرع
-        let address = '';
-        let phone = '';
-        let stopped = '';
-        let available = '';
-        // ابحث عن الخلايا في نفس صف الفرع
-        let tr = branchCell.parentElement;
-        for (let i = 0; i < tr.cells.length; i++) {
-          if (tr.cells[i].rowSpan === 2 && tr.cells[i] !== branchCell) {
-            // عنوان أو رقم
-            if (tr.cells[i].cellIndex === 2) address = tr.cells[i].textContent;
-            if (tr.cells[i].cellIndex === 3) phone = tr.cells[i].textContent;
-          }
-        }
-        // خلية متوقف
-        let stoppedCell = tr.cells[1];
-        if (stoppedCell) {
-          const span = stoppedCell.querySelector('.editable-text');
-          stopped = span ? span.textContent : '';
-        }
-        // خلية متاح
-        let nextTr = tr.nextElementSibling;
-        if (nextTr) {
-          let availableCell = nextTr.cells[0];
-          if (availableCell) {
-            const span = availableCell.querySelector('.editable-text');
-            available = span ? span.textContent : '';
-          }
-        }
-        db.collection('branches').doc(branchName).set({
-          branch: branchName,
-          address,
-          phone,
-          stopped,
-          available
-        });
       };
       textarea.onkeydown = function(ev) {
         if (ev.key === 'Escape') {
@@ -483,52 +405,6 @@
         };
       }
     });
-
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyAEDynlbcx_5XNH6E-wNvYTih4KrAfsdhE",
-      authDomain: "cookdoor-1f857.firebaseapp.com",
-      projectId: "cookdoor-1f857",
-      storageBucket: "cookdoor-1f857.appspot.com",
-      messagingSenderId: "558166482241",
-      appId: "1:558166482241:web:66477632aa90cb511555c0",
-      measurementId: "G-43SBVJHEL7"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // تحميل البيانات من Firestore عند فتح الصفحة أو التغيير
-    function renderBranches(snapshot) {
-      const tbody = document.getElementById('branchesTable');
-      tbody.innerHTML = '';
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        // أضف صفين لكل فرع (نفس منطقك الحالي)
-        const row1 = tbody.insertRow();
-        const branchCell = row1.insertCell();
-        branchCell.rowSpan = 2;
-        branchCell.className = 'text-center align-middle';
-        branchCell.textContent = data.branch;
-        const nameCell1 = row1.insertCell();
-        nameCell1.className = 'fw-bold text-start';
-        nameCell1.innerHTML = `<span class="text-primary">متوقف:</span> <span class="editable-text text-danger">${data.stopped || ''}</span>`;
-        const addressCell1 = row1.insertCell();
-        addressCell1.rowSpan = 2;
-        addressCell1.className = 'text-start align-middle';
-        addressCell1.textContent = data.address;
-        const phoneCell1 = row1.insertCell();
-        phoneCell1.rowSpan = 2;
-        phoneCell1.className = 'text-start align-middle';
-        phoneCell1.textContent = data.phone;
-
-        const row2 = tbody.insertRow();
-        row2.style.borderBottom = '4px solid #000';
-        const nameCell2 = row2.insertCell();
-        nameCell2.className = 'fw-bold text-start';
-        nameCell2.innerHTML = `<span class="text-primary">متاح:</span> <span class="editable-text text-success">${data.available || ''}</span>`;
-      });
-    }
-    db.collection("branches").orderBy('branch').onSnapshot(renderBranches);
   </script>
 </body>
 </html> 
