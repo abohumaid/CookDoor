@@ -296,18 +296,22 @@
             saveTableToFirebase();
           });
         } else if (selected === 'col') {
-          // إضافة عمود جديد
+          // إضافة اسم العمود الجديد إلى رؤوس الأعمدة في Firebase
           db.ref('branchesHeaders').once('value').then(snapshot => {
             let headers = snapshot.val() || [];
-            headers.push('عمود جديد');
+            const newHeader = 'عمود جديد';
+            headers.push(newHeader);
             db.ref('branchesHeaders').set(headers);
+            // إضافة قيمة فارغة لهذا العمود في بيانات كل فرع
+            db.ref('branches').once('value').then(branchSnap => {
+              const branches = branchSnap.val() || {};
+              Object.keys(branches).forEach(key => {
+                if (!branches[key].extra) branches[key].extra = [];
+                branches[key].extra.push('');
+              });
+              db.ref('branches').set(branches);
+            });
           });
-          // إضافة خلية لكل صف
-          for (let i = 0; i < table.rows.length; i++) {
-            const cell = table.rows[i].insertCell(-1);
-            cell.innerHTML = '';
-          }
-          saveTableToFirebase();
         }
       });
     });
@@ -321,7 +325,7 @@
       }
     });
 
-    // منطق التعديل العادي للخلايا
+    // منطق التعديل على الخلايا
     function triggerCellEdit(cell) {
       if (cell.querySelector('textarea')) return;
       // تحقق إذا كانت الخلية من عمود الاسم (متوقف أو متاح)
@@ -337,29 +341,115 @@
       } else {
         editable = cell.innerHTML.replace(/<br\s*\/?>/gi, '\n');
       }
+      // جلب اللون والهايلايت الحاليين
+      let currentColor = cell.getAttribute('data-color') || '';
+      let currentHighlight = cell.getAttribute('data-highlight') === 'true';
+      // textarea
       const textarea = document.createElement('textarea');
       textarea.value = editable;
       textarea.className = 'form-control';
       textarea.style.minWidth = '80px';
       textarea.style.minHeight = '40px';
       textarea.style.resize = 'vertical';
+      // شريط الألوان والهايلايت
+      const colorBar = document.createElement('div');
+      colorBar.style.display = 'flex';
+      colorBar.style.gap = '8px';
+      colorBar.style.marginTop = '5px';
+      colorBar.innerHTML = `
+        <button type="button" class="color-btn" data-color="red" title="أحمر" style="color:#fff;background:#dc3545;border:none;border-radius:50%;width:28px;height:28px;"><i class="bi bi-circle-fill"></i></button>
+        <button type="button" class="color-btn" data-color="green" title="أخضر" style="color:#fff;background:#198754;border:none;border-radius:50%;width:28px;height:28px;"><i class="bi bi-circle-fill"></i></button>
+        <button type="button" class="color-btn" data-color="yellow" title="أصفر" style="color:#fff;background:#ffc107;border:none;border-radius:50%;width:28px;height:28px;"><i class="bi bi-circle-fill"></i></button>
+        <button type="button" class="highlight-btn" title="هايلايت" style="color:#fff;background:#bfff00;border:none;border-radius:50%;width:28px;height:28px;"><i class="bi bi-lightbulb-fill"></i></button>
+      `;
+      // منطقة التعديل
       cell.innerHTML = '';
       cell.appendChild(textarea);
+      cell.appendChild(colorBar);
       textarea.focus();
       textarea.select();
-      textarea.onblur = function() {
-        const lines = textarea.value.split('\n');
-        if (prefix) {
-          cell.innerHTML = `${prefix}<span class=\"editable-text ${isStopped ? 'text-danger' : 'text-success'}\">${lines.map(line => line.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>')}</span>`;
-          cell.className = 'fw-bold text-start';
-        } else {
-          cell.innerHTML = lines.map(line => line.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>');
-        }
-        if (lastEditedCell) lastEditedCell.classList.remove('table-warning');
-        cell.classList.add('table-warning');
-        lastEditedCell = cell;
-        saveTableToFirebase();
+      // متغيرات اللون والهايلايت
+      let selectedColor = currentColor;
+      let highlightActive = currentHighlight;
+      // تفعيل الألوان
+      colorBar.querySelectorAll('.color-btn').forEach(btn => {
+        btn.onclick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          selectedColor = btn.getAttribute('data-color');
+          highlightActive = false;
+          updateCellStyle();
+        };
+      });
+      // تفعيل الهايلايت
+      colorBar.querySelector('.highlight-btn').onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        highlightActive = !highlightActive;
+        if (highlightActive) selectedColor = '';
+        updateCellStyle();
       };
+      // تحديث ستايل textarea حسب الاختيار
+      function updateCellStyle() {
+        textarea.style.background = highlightActive ? '#eaffb0' : '#fff';
+        textarea.style.color = selectedColor === 'red' ? '#dc3545' : selectedColor === 'green' ? '#198754' : selectedColor === 'yellow' ? '#ffc107' : '#212529';
+        // تمييز الأزرار
+        colorBar.querySelectorAll('.color-btn').forEach(btn => {
+          btn.style.outline = (btn.getAttribute('data-color') === selectedColor && !highlightActive) ? '2px solid #000' : 'none';
+        });
+        colorBar.querySelector('.highlight-btn').style.outline = highlightActive ? '2px solid #000' : 'none';
+      }
+      updateCellStyle();
+      // منع blur عند الضغط على الأيقونات
+      colorBar.onmousedown = function(e) { e.preventDefault(); };
+      // عند فقدان التركيز (إغلاق التعديل)
+      textarea.onblur = function(e) {
+        setTimeout(() => {
+          // إذا كان التركيز انتقل إلى زر من شريط الألوان، لا تغلق التعديل
+          if (document.activeElement && colorBar.contains(document.activeElement)) {
+            textarea.focus();
+            return;
+          }
+          // حفظ النص واللون والهايلايت
+          let value = textarea.value.trim();
+          if (prefix) {
+            cell.innerHTML = `${prefix}<span class=\"editable-text ${isStopped ? 'text-danger' : 'text-success'}\">${value.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</span>`;
+            cell.className = 'fw-bold text-start';
+          } else {
+            cell.innerHTML = value.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+          }
+          // إزالة الألوان والهايلايت إذا الخلية فارغة
+          if (!value) {
+            cell.removeAttribute('data-color');
+            cell.removeAttribute('data-highlight');
+            cell.style.background = '';
+            cell.style.color = '';
+          } else {
+            // حفظ اللون والهايلايت في data attributes
+            if (highlightActive) {
+              cell.setAttribute('data-highlight', 'true');
+              cell.removeAttribute('data-color');
+              cell.style.background = '#eaffb0';
+              cell.style.color = '#212529';
+            } else if (selectedColor) {
+              cell.setAttribute('data-color', selectedColor);
+              cell.removeAttribute('data-highlight');
+              cell.style.background = '';
+              cell.style.color = selectedColor === 'red' ? '#dc3545' : selectedColor === 'green' ? '#198754' : selectedColor === 'yellow' ? '#ffc107' : '#212529';
+            } else {
+              cell.removeAttribute('data-color');
+              cell.removeAttribute('data-highlight');
+              cell.style.background = '';
+              cell.style.color = '';
+            }
+          }
+          if (lastEditedCell) lastEditedCell.classList.remove('table-warning');
+          cell.classList.add('table-warning');
+          lastEditedCell = cell;
+          saveTableToFirebase();
+        }, 100);
+      };
+      // عند الضغط على Escape
       textarea.onkeydown = function(ev) {
         if (ev.key === 'Escape') {
           if (prefix) {
@@ -425,39 +515,138 @@
       const table = document.getElementById('branchesTable');
       table.innerHTML = '';
       if (!data) return;
-      Object.keys(data).forEach(key => {
-        const branch = data[key];
-        const row1 = document.createElement('tr');
-        let deleteBtn = '';
-        if (isAdmin) {
-          deleteBtn = `<button class="btn btn-sm btn-danger ms-2 delete-branch-btn" data-key="${key}"><i class="bi bi-trash"></i></button>`;
-        }
-        row1.innerHTML = `
-          <td rowspan="2" class="text-center align-middle">${deleteBtn} ${branch.branch}</td>
-          <td class="fw-bold text-start"><span class="text-primary">متوقف:</span> <span class="editable-text text-danger">${branch.stopped || ''}</span></td>
-          <td rowspan="2" class="text-start align-middle">${branch.address || ''}</td>
-          <td rowspan="2" class="text-start align-middle">${branch.phone || ''}</td>
-        `;
-        table.appendChild(row1);
-        const row2 = document.createElement('tr');
-        row2.style.borderBottom = '4px solid #000';
-        row2.innerHTML = `
-          <td class="fw-bold text-start"><span class="text-primary">متاح:</span> <span class="editable-text text-success">${branch.available || ''}</span></td>
-        `;
-        table.appendChild(row2);
-      });
-      if (isAdmin) {
-        const deleteBtns = document.querySelectorAll('.delete-branch-btn');
-        deleteBtns.forEach(btn => {
-          btn.onclick = function(e) {
-            e.stopPropagation();
-            const key = btn.getAttribute('data-key');
-            if (confirm('Are you sure you want to delete this branch?')) {
-              db.ref('branches/' + key).remove();
+      db.ref('branchesHeaders').once('value').then(headersSnap => {
+        const headers = headersSnap.val() || [];
+        Object.keys(data).forEach(key => {
+          const branch = data[key];
+          const row1 = document.createElement('tr');
+          let deleteBtn = '';
+          if (isAdmin) {
+            deleteBtn = `<button class="btn btn-sm btn-danger ms-2 delete-branch-btn" data-key="${key}"><i class="bi bi-trash"></i></button>`;
+          }
+          // خلية الفرع
+          const branchTd = document.createElement('td');
+          branchTd.rowSpan = 2;
+          branchTd.className = 'text-center align-middle';
+          branchTd.innerHTML = (isAdmin ? `<button class="btn btn-sm btn-danger ms-2 delete-branch-btn" data-key="${key}"><i class="bi bi-trash"></i></button> ` : '') + branch.branch;
+          row1.appendChild(branchTd);
+          // خلية متوقف
+          const stoppedTd = document.createElement('td');
+          stoppedTd.className = 'fw-bold text-start';
+          stoppedTd.innerHTML = `<span class="editable-text text-danger">${(branch.stopped && branch.stopped.value) || ''}</span>`;
+          if (branch.stopped) {
+            if (branch.stopped.color) stoppedTd.setAttribute('data-color', branch.stopped.color);
+            else stoppedTd.removeAttribute('data-color');
+            if (branch.stopped.highlight) stoppedTd.setAttribute('data-highlight', 'true');
+            else stoppedTd.removeAttribute('data-highlight');
+            if (branch.stopped.highlight) stoppedTd.style.background = '#eaffb0';
+            else stoppedTd.style.background = '';
+            if (branch.stopped.color === 'red') stoppedTd.style.color = '#dc3545';
+            else if (branch.stopped.color === 'green') stoppedTd.style.color = '#198754';
+            else if (branch.stopped.color === 'yellow') stoppedTd.style.color = '#ffc107';
+            else stoppedTd.style.color = '';
+          }
+          row1.appendChild(stoppedTd);
+          // خلية العنوان
+          const addressTd = document.createElement('td');
+          addressTd.rowSpan = 2;
+          addressTd.className = 'text-start align-middle';
+          addressTd.textContent = (branch.address && branch.address.value) || '';
+          if (branch.address) {
+            if (branch.address.color) addressTd.setAttribute('data-color', branch.address.color);
+            else addressTd.removeAttribute('data-color');
+            if (branch.address.highlight) addressTd.setAttribute('data-highlight', 'true');
+            else addressTd.removeAttribute('data-highlight');
+            if (branch.address.highlight) addressTd.style.background = '#eaffb0';
+            else addressTd.style.background = '';
+            if (branch.address.color === 'red') addressTd.style.color = '#dc3545';
+            else if (branch.address.color === 'green') addressTd.style.color = '#198754';
+            else if (branch.address.color === 'yellow') addressTd.style.color = '#ffc107';
+            else addressTd.style.color = '';
+          }
+          row1.appendChild(addressTd);
+          // خلية الرقم
+          const phoneTd = document.createElement('td');
+          phoneTd.rowSpan = 2;
+          phoneTd.className = 'text-start align-middle';
+          phoneTd.textContent = (branch.phone && branch.phone.value) || '';
+          if (branch.phone) {
+            if (branch.phone.color) phoneTd.setAttribute('data-color', branch.phone.color);
+            else phoneTd.removeAttribute('data-color');
+            if (branch.phone.highlight) phoneTd.setAttribute('data-highlight', 'true');
+            else phoneTd.removeAttribute('data-highlight');
+            if (branch.phone.highlight) phoneTd.style.background = '#eaffb0';
+            else phoneTd.style.background = '';
+            if (branch.phone.color === 'red') phoneTd.style.color = '#dc3545';
+            else if (branch.phone.color === 'green') phoneTd.style.color = '#198754';
+            else if (branch.phone.color === 'yellow') phoneTd.style.color = '#ffc107';
+            else phoneTd.style.color = '';
+          }
+          row1.appendChild(phoneTd);
+          // أعمدة إضافية (extra columns)
+          if (headers.length > 4) {
+            for (let i = 4; i < headers.length; i++) {
+              const extraCell = document.createElement('td');
+              extraCell.className = 'text-start align-middle';
+              const extraData = branch.extra && branch.extra[i-4] ? branch.extra[i-4] : { value: '', color: '', highlight: false };
+              extraCell.textContent = extraData.value || '';
+              if (extraData.color) extraCell.setAttribute('data-color', extraData.color);
+              else extraCell.removeAttribute('data-color');
+              if (extraData.highlight) extraCell.setAttribute('data-highlight', 'true');
+              else extraCell.removeAttribute('data-highlight');
+              if (extraData.highlight) extraCell.style.background = '#eaffb0';
+              else extraCell.style.background = '';
+              if (extraData.color === 'red') extraCell.style.color = '#dc3545';
+              else if (extraData.color === 'green') extraCell.style.color = '#198754';
+              else if (extraData.color === 'yellow') extraCell.style.color = '#ffc107';
+              else extraCell.style.color = '';
+              row1.appendChild(extraCell);
             }
-          };
+          }
+          table.appendChild(row1);
+          // الصف الثاني (متاح)
+          const row2 = document.createElement('tr');
+          row2.style.borderBottom = '4px solid #000';
+          const availableTd = document.createElement('td');
+          availableTd.className = 'fw-bold text-start';
+          availableTd.innerHTML = `<span class="editable-text text-success">${(branch.available && branch.available.value) || ''}</span>`;
+          if (branch.available) {
+            if (branch.available.color) availableTd.setAttribute('data-color', branch.available.color);
+            else availableTd.removeAttribute('data-color');
+            if (branch.available.highlight) availableTd.setAttribute('data-highlight', 'true');
+            else availableTd.removeAttribute('data-highlight');
+            if (branch.available.highlight) availableTd.style.background = '#eaffb0';
+            else availableTd.style.background = '';
+            if (branch.available.color === 'red') availableTd.style.color = '#dc3545';
+            else if (branch.available.color === 'green') availableTd.style.color = '#198754';
+            else if (branch.available.color === 'yellow') availableTd.style.color = '#ffc107';
+            else availableTd.style.color = '';
+          }
+          row2.appendChild(availableTd);
+          // أعمدة إضافية (extra columns) للصف الثاني (فارغة)
+          if (headers.length > 4) {
+            for (let i = 4; i < headers.length; i++) {
+              const extraCell2 = document.createElement('td');
+              extraCell2.className = 'text-start align-middle';
+              extraCell2.textContent = '';
+              row2.appendChild(extraCell2);
+            }
+          }
+          table.appendChild(row2);
         });
-      }
+        if (isAdmin) {
+          const deleteBtns = document.querySelectorAll('.delete-branch-btn');
+          deleteBtns.forEach(btn => {
+            btn.onclick = function(e) {
+              e.stopPropagation();
+              const key = btn.getAttribute('data-key');
+              if (confirm('Are you sure you want to delete this branch?')) {
+                db.ref('branches/' + key).remove();
+              }
+            };
+          });
+        }
+      });
     }
 
     // عند تسجيل الدخول أو الخروج، أعد بناء الجدول ليظهر أو يخفي أزرار الحذف
@@ -475,23 +664,51 @@
     function saveTableToFirebase() {
       const table = document.getElementById('branchesTable');
       const rows = table.querySelectorAll('tr');
-      const branches = {};
-      for (let i = 0; i < rows.length; i += 2) {
-        const branchCell = rows[i].querySelector('td');
-        const stoppedCell = rows[i].querySelectorAll('td')[1];
-        const addressCell = rows[i].querySelectorAll('td')[2];
-        const phoneCell = rows[i].querySelectorAll('td')[3];
-        const availableCell = rows[i+1].querySelector('td');
-        const branchName = branchCell ? branchCell.textContent : '';
-        branches['branch_' + i] = {
-          branch: branchName,
-          stopped: stoppedCell ? stoppedCell.querySelector('.editable-text')?.textContent : '',
-          available: availableCell ? availableCell.querySelector('.editable-text')?.textContent : '',
-          address: addressCell ? addressCell.textContent : '',
-          phone: phoneCell ? phoneCell.textContent : ''
-        };
-      }
-      db.ref('branches').set(branches);
+      db.ref('branchesHeaders').once('value').then(headersSnap => {
+        const headers = headersSnap.val() || [];
+        const branches = {};
+        for (let i = 0; i < rows.length; i += 2) {
+          const branchCell = rows[i].querySelector('td');
+          const stoppedCell = rows[i].querySelectorAll('td')[1];
+          const addressCell = rows[i].querySelectorAll('td')[2];
+          const phoneCell = rows[i].querySelectorAll('td')[3];
+          const availableCell = rows[i+1].querySelector('td');
+          const branchName = branchCell ? branchCell.textContent : '';
+          // الأعمدة الإضافية
+          let extra = [];
+          if (headers.length > 4) {
+            for (let j = 4; j < headers.length; j++) {
+              const extraCell = rows[i].querySelectorAll('td')[j];
+              if (extraCell) {
+                extra.push({
+                  value: extraCell.innerText || '',
+                  color: extraCell.getAttribute('data-color') || '',
+                  highlight: extraCell.getAttribute('data-highlight') === 'true'
+                });
+              } else {
+                extra.push({ value: '', color: '', highlight: false });
+              }
+            }
+          }
+          // حفظ بيانات اللون/الهايلايت للخلايا الأساسية
+          function getCellData(cell) {
+            return {
+              value: cell ? (cell.innerText || '') : '',
+              color: cell ? (cell.getAttribute('data-color') || '') : '',
+              highlight: cell ? (cell.getAttribute('data-highlight') === 'true') : false
+            };
+          }
+          branches['branch_' + i] = {
+            branch: branchName,
+            stopped: getCellData(stoppedCell),
+            available: getCellData(availableCell),
+            address: getCellData(addressCell),
+            phone: getCellData(phoneCell),
+            extra: extra
+          };
+        }
+        db.ref('branches').set(branches);
+      });
     }
 
     // --- دعم تزامن رؤوس الأعمدة عبر Firebase ---
@@ -508,9 +725,38 @@
       if (!headers) return;
       const headRow = document.querySelector('thead tr');
       headRow.innerHTML = '';
-      headers.forEach(h => {
+      headers.forEach((h, idx) => {
         const th = document.createElement('th');
         th.innerHTML = h;
+        // زر حذف العمود (للأدمن فقط، ولا يظهر للأعمدة الأساسية الأربعة الأولى)
+        if (isAdmin && idx >= 4) {
+          const delBtn = document.createElement('button');
+          delBtn.className = 'btn btn-sm btn-danger ms-1 delete-col-btn';
+          delBtn.title = 'حذف العمود';
+          delBtn.innerHTML = '<i class="bi bi-trash"></i>';
+          delBtn.onclick = function(e) {
+            e.stopPropagation();
+            if (confirm('هل تريد حذف هذا العمود بالكامل؟')) {
+              // حذف العمود من branchesHeaders
+              db.ref('branchesHeaders').once('value').then(snap => {
+                let headersArr = snap.val() || [];
+                headersArr.splice(idx, 1);
+                db.ref('branchesHeaders').set(headersArr);
+                // حذف بيانات العمود من كل فرع
+                db.ref('branches').once('value').then(branchSnap => {
+                  let branches = branchSnap.val() || {};
+                  Object.keys(branches).forEach(key => {
+                    if (branches[key].extra && branches[key].extra.length > idx-4) {
+                      branches[key].extra.splice(idx-4, 1);
+                    }
+                  });
+                  db.ref('branches').set(branches);
+                });
+              });
+            }
+          };
+          th.appendChild(delBtn);
+        }
         headRow.appendChild(th);
       });
     }
