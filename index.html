@@ -27,12 +27,7 @@
     <div class="table-responsive">
       <table class="table table-bordered table-striped text-center w-100" style="margin:0;">
         <thead class="table-dark">
-          <tr>
-            <th>الفرع</th>
-            <th>الاسم</th>
-            <th>العنوان</th>
-            <th>الرقم</th>
-          </tr>
+          <tr></tr>
         </thead>
         <tbody id="branchesTable"></tbody>
       </table>
@@ -276,9 +271,7 @@
         {label: '<i class="bi bi-layout-three-columns"></i> Add Column', value: 'col'}
       ], function(selected) {
         if (selected === 'row') {
-          // نافذة إدخال اسم الفرع فقط
           showBranchNameModal(function(branchName) {
-            // الصف الأول
             const newRow1 = table.insertRow();
             const branchCell = newRow1.insertCell();
             branchCell.rowSpan = 2;
@@ -295,7 +288,6 @@
             phoneCell1.rowSpan = 2;
             phoneCell1.className = 'text-start align-middle';
             phoneCell1.textContent = '';
-            // الصف الثاني
             const newRow2 = table.insertRow();
             newRow2.style.borderBottom = '4px solid #000';
             const nameCell2 = newRow2.insertCell();
@@ -305,10 +297,12 @@
           });
         } else if (selected === 'col') {
           // إضافة عمود جديد
-          const headRow = table.parentElement.querySelector('thead tr');
-          const th = document.createElement('th');
-          th.innerHTML = 'عمود جديد';
-          headRow.appendChild(th);
+          db.ref('branchesHeaders').once('value').then(snapshot => {
+            let headers = snapshot.val() || [];
+            headers.push('عمود جديد');
+            db.ref('branchesHeaders').set(headers);
+          });
+          // إضافة خلية لكل صف
           for (let i = 0; i < table.rows.length; i++) {
             const cell = table.rows[i].insertCell(-1);
             cell.innerHTML = '';
@@ -433,7 +427,6 @@
       if (!data) return;
       Object.keys(data).forEach(key => {
         const branch = data[key];
-        // الصف الأول (متوقف)
         const row1 = document.createElement('tr');
         let deleteBtn = '';
         if (isAdmin) {
@@ -446,7 +439,6 @@
           <td rowspan="2" class="text-start align-middle">${branch.phone || ''}</td>
         `;
         table.appendChild(row1);
-        // الصف الثاني (متاح)
         const row2 = document.createElement('tr');
         row2.style.borderBottom = '4px solid #000';
         row2.innerHTML = `
@@ -454,7 +446,6 @@
         `;
         table.appendChild(row2);
       });
-      // إضافة حدث الحذف للأزرار (للأدمن فقط)
       if (isAdmin) {
         const deleteBtns = document.querySelectorAll('.delete-branch-btn');
         deleteBtns.forEach(btn => {
