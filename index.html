@@ -416,7 +416,7 @@
           th.innerHTML = lines.map(line => line.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>');
           th.classList.add('table-warning');
           setTimeout(() => th.classList.remove('table-warning'), 2000);
-          saveTableToFirebase();
+          saveHeadersToFirebase();
         };
         textarea.onkeydown = function(ev) {
           if (ev.key === 'Escape') {
@@ -502,6 +502,32 @@
       }
       db.ref('branches').set(branches);
     }
+
+    // --- دعم تزامن رؤوس الأعمدة عبر Firebase ---
+    // حفظ رؤوس الأعمدة في Firebase
+    function saveHeadersToFirebase() {
+      const ths = document.querySelectorAll('thead th');
+      const headers = [];
+      ths.forEach(th => headers.push(th.innerHTML));
+      db.ref('branchesHeaders').set(headers);
+    }
+
+    // تحميل رؤوس الأعمدة من Firebase وتحديث الجدول
+    function renderHeaders(headers) {
+      if (!headers) return;
+      const headRow = document.querySelector('thead tr');
+      headRow.innerHTML = '';
+      headers.forEach(h => {
+        const th = document.createElement('th');
+        th.innerHTML = h;
+        headRow.appendChild(th);
+      });
+    }
+
+    // الاستماع لتغييرات رؤوس الأعمدة
+    db.ref('branchesHeaders').on('value', (snapshot) => {
+      renderHeaders(snapshot.val());
+    });
 
     saveBtn.addEventListener('click', function() {
       saveTableToFirebase();
