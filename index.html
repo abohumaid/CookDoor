@@ -10,6 +10,56 @@
     body { background: #f8f9fa; }
     .search-box { max-width: 400px; margin: 30px auto 20px; }
     table { background: #fff; }
+    .custom-footer {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      z-index: 99999;
+      width: auto;
+      min-width: 220px;
+      background: rgba(255,255,255,0.95);
+      border-top-right-radius: 12px;
+      box-shadow: 0 0 10px #0002;
+      padding: 10px 18px 12px 18px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .custom-footer .footer-icons {
+      width: 100%;
+      display: flex;
+      justify-content: flex-start;
+      gap: 18px;
+      margin-top: 6px;
+    }
+    .custom-footer .footer-icons a {
+      color: #222;
+      font-size: 1.7em;
+      transition: color 0.2s;
+    }
+    .custom-footer .footer-icons a.facebook {
+      color: #1877f3;
+    }
+    .custom-footer .footer-icons a.facebook:hover {
+      color: #0e5a9c;
+    }
+    .custom-footer .footer-icons a.linkedin {
+      color: #0a66c2;
+    }
+    .custom-footer .footer-icons a.linkedin:hover {
+      color: #004182;
+    }
+    .custom-footer .footer-icons a.github {
+      color: #181717;
+    }
+    .custom-footer .footer-icons a.github:hover {
+      color: #333;
+    }
+    @media (max-width: 600px) {
+      .custom-footer { min-width: 120px; padding: 7px 8px 8px 8px; font-size: 0.95em; }
+      .custom-footer .footer-icons a { font-size: 1.3em; }
+    }
   </style>
 </head>
 <body>
@@ -412,10 +462,10 @@
           }
           // حفظ النص واللون والهايلايت
           let value = textarea.value.trim();
-          if (prefix) {
+        if (prefix) {
             cell.innerHTML = `${prefix}<span class=\"editable-text ${isStopped ? 'text-danger' : 'text-success'}\">${value.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</span>`;
-            cell.className = 'fw-bold text-start';
-          } else {
+          cell.className = 'fw-bold text-start';
+        } else {
             cell.innerHTML = value.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
           }
           // إزالة الألوان والهايلايت إذا الخلية فارغة
@@ -442,10 +492,10 @@
               cell.style.background = '';
               cell.style.color = '';
             }
-          }
-          if (lastEditedCell) lastEditedCell.classList.remove('table-warning');
-          cell.classList.add('table-warning');
-          lastEditedCell = cell;
+        }
+        if (lastEditedCell) lastEditedCell.classList.remove('table-warning');
+        cell.classList.add('table-warning');
+        lastEditedCell = cell;
           saveTableToFirebase();
         }, 100);
       };
@@ -728,35 +778,6 @@
       headers.forEach((h, idx) => {
         const th = document.createElement('th');
         th.innerHTML = h;
-        // زر حذف العمود (للأدمن فقط، ولا يظهر للأعمدة الأساسية الأربعة الأولى)
-        if (isAdmin && idx >= 4) {
-          const delBtn = document.createElement('button');
-          delBtn.className = 'btn btn-sm btn-danger ms-1 delete-col-btn';
-          delBtn.title = 'حذف العمود';
-          delBtn.innerHTML = '<i class="bi bi-trash"></i>';
-          delBtn.onclick = function(e) {
-            e.stopPropagation();
-            if (confirm('هل تريد حذف هذا العمود بالكامل؟')) {
-              // حذف العمود من branchesHeaders
-              db.ref('branchesHeaders').once('value').then(snap => {
-                let headersArr = snap.val() || [];
-                headersArr.splice(idx, 1);
-                db.ref('branchesHeaders').set(headersArr);
-                // حذف بيانات العمود من كل فرع
-                db.ref('branches').once('value').then(branchSnap => {
-                  let branches = branchSnap.val() || {};
-                  Object.keys(branches).forEach(key => {
-                    if (branches[key].extra && branches[key].extra.length > idx-4) {
-                      branches[key].extra.splice(idx-4, 1);
-                    }
-                  });
-                  db.ref('branches').set(branches);
-                });
-              });
-            }
-          };
-          th.appendChild(delBtn);
-        }
         headRow.appendChild(th);
       });
     }
@@ -773,4 +794,16 @@
     });
   </script>
 </body>
+<!-- تذييل ثابت أسفل يسار الشاشة -->
+<div class="custom-footer">
+  <div style="display: flex; align-items: center; gap: 7px;">
+    <span style="font-size: 18px; font-weight: 500;">Ahmed Mohamed</span>
+    <span class="fw-bold">:By-Eng</span>
+  </div>
+  <div class="footer-icons justify-content-center w-100">
+    <a href="https://web.facebook.com/ahmed.mohamed.857575" class="facebook" target="_blank" title="Facebook"><i class="bi bi-facebook"></i></a>
+    <a href="https://www.linkedin.com/in/ahmed-mohamed-596713279/" class="github" target="_blank" title="GitHub"><i class="bi bi-github"></i></a>
+    <a href="https://www.linkedin.com/in/ahmed-mohamed-596713279/" class="linkedin" target="_blank" title="LinkedIn"><i class="bi bi-linkedin"></i></a>
+  </div>
+</div>
 </html> 
